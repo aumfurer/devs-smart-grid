@@ -1,0 +1,3 @@
+[submodule "informe"]
+	path = informe
+	url = git@github.com:plbalbi/SED-TP1-informe.git
