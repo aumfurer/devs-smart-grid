@@ -1,5 +1,5 @@
-#ifndef _PULSE_H_
-#define _PULSE_H_
+#ifndef _SOLAR_H_
+#define _SOLAR_H_
 
 #include <random>
 
