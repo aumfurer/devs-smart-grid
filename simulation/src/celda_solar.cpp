@@ -10,7 +10,6 @@
 
 using namespace std;
 
-
 CeldaSolar::CeldaSolar(const string &name) :
 	Atomic(name),
 	solar_change(addInputPort("solar_change")),
@@ -30,6 +29,11 @@ Model &CeldaSolar::initFunction()
 }
 
 
+/* 
+	Como "solar_change" es el úncio input_port de una CeldaSolar,
+	si se produce una transición externa, se debe a que llegó un mensaje
+	en dicho puerto
+ */
 Model &CeldaSolar::externalFunction(const ExternalMessage &msg)
 {
 	this->energia_produciendo_previo = this->energia_produciendo;
