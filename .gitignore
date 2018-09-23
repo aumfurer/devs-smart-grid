@@ -1,0 +1,5 @@
+*.dep
+*.o
+simulation/src/bin/
+simulation/src/bin/*
+simulation/src/output
