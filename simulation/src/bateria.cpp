@@ -18,7 +18,7 @@ Bateria::Bateria(const string &name) :
 
 	energy_in(addInputPort("energy_in")),
 	required_energy(addInputPort("required_energy")),
-	batery_state(addOutputPort("batery_state")),
+	battery_state(addOutputPort("battery_state")),
 
 	energy_from_generators(0),
     energy_sending(0),
@@ -84,7 +84,7 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 Model &Bateria::outputFunction(const CollectMessage &msg)
 {
 	// estoy aca porque ocurrio un evento
-	sendOutput(msg.time(), this->batery_state, Real(this->next_state));
+	sendOutput(msg.time(), this->battery_state, Real(this->next_state));
 	
 	return *this ;
 }

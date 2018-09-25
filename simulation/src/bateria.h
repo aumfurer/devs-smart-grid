@@ -32,7 +32,7 @@ class Bateria : public Atomic {
   private:
     const Port &energy_in;
     const Port &required_energy;
-    Port &batery_state;
+    Port &battery_state;
 
     double energy_from_generators;
     double energy_sending;

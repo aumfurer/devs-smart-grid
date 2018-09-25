@@ -13,7 +13,7 @@ using namespace std;
 
 GeneradorEolico::GeneradorEolico(const string &name) :
 	Atomic(name),
-	wind_charge(addInputPort("solar_change")),
+	wind_charge(addInputPort("wind_change")),
 	out(addOutputPort("out")),
 	on(true),
 	factor(1.0),

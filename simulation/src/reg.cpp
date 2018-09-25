@@ -6,6 +6,7 @@
 // #include "mi_header.h"
 #include "celda_solar.h"
 #include "generador_eolico.h"
+#include "bateria.h"
 
 
 void register_atomics_on(ParallelModelAdmin &admin)
@@ -16,4 +17,6 @@ void register_atomics_on(ParallelModelAdmin &admin)
 	
 	admin.registerAtomic(NewAtomicFunction<CeldaSolar>(), CELDA_SOLAR_NAME);
 	admin.registerAtomic(NewAtomicFunction<GeneradorEolico>(), GENERADOR_EOLICO_NAME);
+	admin.registerAtomic(NewAtomicFunction<Bateria>(), BATERIA_NAME);
+
 }
