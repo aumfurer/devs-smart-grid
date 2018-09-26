@@ -10,6 +10,8 @@
 
 #include "bateria.h"
 
+#define eps 1e-5
+
 using namespace std;
 
 
@@ -23,13 +25,13 @@ Bateria::Bateria(const string &name) :
 	energy_from_generators(0),
     energy_sending(0),
     charge(0),
-    last_update(0),
-	next_state(Bateria::AVAILABLE)
+    last_update(0)
 {
 }
 
 Model &Bateria::initFunction()
 {
+	this->charge = 0;
 	holdIn(AtomicState::active, VTime::Inf);
 	return *this;
 }
@@ -37,12 +39,20 @@ Model &Bateria::initFunction()
 
 Model &Bateria::externalFunction(const ExternalMessage &msg)
 {
-	this->update_current_charge(msg.time());
+	VTime update_time = msg.time();
+	this->charge = this->new_current_charge(update_time);
+	this->last_update = update_time;
+	
 	double value = Real::from_value(msg.value()).value();
 	if(msg.port() == this->energy_in){
 		this->energy_from_generators += value;
 	} else if(msg.port() == this->required_energy){
-		this->energy_sending = this->next_state == Bateria::AVAILABLE ? 0: value;
+
+		bool still_waiting_for_available = 
+			this->energy_sending == 0 &&
+			this->charge < Bateria::MIN_CAPACITY;
+			
+		this->energy_sending = still_waiting_for_available ? 0: value;
 	}
 	this->update_next_event();
 	return *this;
@@ -53,7 +63,11 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 {
 	VTime update_time = msg.time();
 
-	if (this->next_state == Bateria::EMPTY){
+	this->charge = this->new_current_charge(msg.time());
+	this->last_update = update_time;
+	
+
+	if (this->charge < eps){
 		// Se termino la bateria
 		this->energy_sending = 0;
 		this->charge = 0;
@@ -62,12 +76,10 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 		} else {
 			nextChange(VTime::Inf);
 		}
-	} else if (this->next_state == Bateria::MIN_CAPACITY){
-		// Ya esta disponible la bateria: recalculo el tiempo para que se llene
-		this->next_state = Bateria::FULL;
-		const float delta = this->energy_from_generators - this->energy_sending;
+	} else if (abs(this->charge - Bateria::MIN_CAPACITY) < eps){
+		const double delta = this->energy_from_generators - this->energy_sending;
 		if (delta > 0){
-			const float time_to_full =  (Bateria::CAPACITY - this->charge) / delta;
+			const double time_to_full = (Bateria::CAPACITY - this->charge) / delta;
 			nextChange(to_VTime(time_to_full));
 		} else {
 			nextChange(VTime::Inf);
@@ -75,6 +87,7 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 	} else {
 		// Se lleno la bateria (no hago nada?)
 		assert(this->energy_from_generators > this->energy_sending);
+		assert(abs(this->charge - Bateria::CAPACITY) < eps);
 		nextChange(VTime::Inf);
 	}
 	return *this;
@@ -83,39 +96,44 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 
 Model &Bateria::outputFunction(const CollectMessage &msg)
 {
+
+	double new_charge = this->new_current_charge(msg.time());
 	// estoy aca porque ocurrio un evento
-	sendOutput(msg.time(), this->battery_state, Real(this->next_state));
+	sendOutput(msg.time(), this->battery_state, 
+		new_charge < eps ? Bateria::EMPTY :
+		abs(new_charge - Bateria::MIN_CAPACITY) ? Bateria::AVAILABLE:
+		Bateria::FULL
+	);
 	
 	return *this ;
 }
 
-void Bateria::update_current_charge(const VTime &update_time)
+double Bateria::new_current_charge(const VTime &update_time)
 {
-	const float delta = this->energy_from_generators - this->energy_sending;
-	this->charge += delta * (update_time - this->last_update).asMsecs();
-	this->last_update = update_time;
+	const double delta = this->energy_from_generators - this->energy_sending;
+	double res = this->charge + delta * (update_time - this->last_update).asMsecs() / 1000;
+	res = min(res, Bateria::CAPACITY);
+	return res;
 }
 
 void Bateria::update_next_event()
 {
-	const float delta = this->energy_from_generators - this->energy_sending;
+	const double delta = this->energy_from_generators - this->energy_sending;
 	if(delta == 0){
 		nextChange(VTime::Inf); 
 	} else if (delta < 0){
-		const float remaining_hours = this->charge / -delta;
-		this->next_state = Bateria::EMPTY;
-		nextChange(to_VTime(remaining_hours));
+		const double remaining_seconds = this->charge / -delta;
+		nextChange(to_VTime(remaining_seconds));
 	} else if (this->charge < Bateria::MIN_CAPACITY){
-		const float time_to_availability = (Bateria::MIN_CAPACITY - this->charge) / delta;
-		this->next_state = Bateria::AVAILABLE;
+		const double time_to_availability = (Bateria::MIN_CAPACITY - this->charge) / delta;
 		nextChange(to_VTime(time_to_availability));
 	} else {
-		const float time_to_full =  (Bateria::CAPACITY - this->charge) / delta;
-		this->next_state = Bateria::FULL;
+		const double time_to_full =  (Bateria::CAPACITY - this->charge) / delta;
 		nextChange(to_VTime(time_to_full));
 	}
 }
 
 VTime Bateria::to_VTime(double v){
-	return VTime((int)ceil(60 * 60 * 1000 * v));
+	VTime res = VTime(0,0,0,0, (float)(v)*1000);
+	return res;
 }

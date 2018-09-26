@@ -38,9 +38,10 @@ class Bateria : public Atomic {
     double energy_sending;
     double charge;
     VTime last_update;
-    int next_state;
+    // int next_state;
 
-    void update_current_charge(const VTime &update_time);
+    // void update_current_charge(const VTime &update_time);
+    double new_current_charge(const VTime &update_time);
     void update_next_event();
 
     VTime to_VTime(double v);
