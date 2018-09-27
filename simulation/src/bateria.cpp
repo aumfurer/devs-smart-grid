@@ -2,6 +2,7 @@
 #include <string>
 #include <cassert>
 #include <cmath>
+#include <iostream>
 
 #include "message.h"
 #include "parsimu.h"
@@ -55,6 +56,7 @@ Model &Bateria::externalFunction(const ExternalMessage &msg)
 		this->energy_sending = still_waiting_for_available ? 0: value;
 	}
 	this->update_next_event();
+	cout << msg.time() << " " << this->charge << " (ext)" << endl;
 	return *this;
 }
 
@@ -90,6 +92,8 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 		assert(abs(this->charge - Bateria::CAPACITY) < eps);
 		nextChange(VTime::Inf);
 	}
+
+	cout << msg.time() << " " << this->charge << " (int)" << endl;
 	return *this;
 }
 

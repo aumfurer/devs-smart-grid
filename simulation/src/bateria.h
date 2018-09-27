@@ -17,7 +17,7 @@ class Bateria : public Atomic {
     virtual string className() const {  return BATERIA_NAME ;}
   
     const double CAPACITY = 500.0;
-    const double MIN_CAPACITY = 10.0;
+    const double MIN_CAPACITY = 100.0;
 
     const int EMPTY = 0;
     const int AVAILABLE = 1;
