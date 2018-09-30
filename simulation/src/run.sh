@@ -1,1 +1,1 @@
-bin/cd++ -m../sg.ma -e../sg.ev -ooutput
+bin/cd++ -m../batery.ma -e../sg.ev -ooutput -llogs
