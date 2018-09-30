@@ -15,6 +15,7 @@
 
 using namespace std;
 
+
 Bateria::Bateria(const string &name) :
 	Atomic(name),
 
@@ -25,7 +26,6 @@ Bateria::Bateria(const string &name) :
 	// Output ports
 	battery_state(		addOutputPort("battery_state")),
 
-	// State variables initialization
 	energy_from_generators(0),
     energy_sending(0),
     charge(0),
@@ -49,8 +49,12 @@ Model &Bateria::externalFunction(const ExternalMessage &msg)
 	
 	double value = Real::from_value(msg.value()).value();
 	if(msg.port() == this->energy_in){
-		this->energy_from_generators += value;
+		// Message comes from generators
+		// Changed this to take just the new amount of power being generated, instead of delta
+		// Easier to interpret in messages later
+		this->energy_from_generators = value;
 	} else if(msg.port() == this->required_energy){
+		// Message comes from controller
 
 		bool still_waiting_for_available = 
 			this->energy_sending == 0 &&
@@ -107,8 +111,8 @@ Model &Bateria::outputFunction(const CollectMessage &msg)
 	double new_charge = this->new_current_charge(msg.time());
 	// estoy aca porque ocurrio un evento
 	sendOutput(msg.time(), this->battery_state, 
-		new_charge < eps ? Bateria::EMPTY :
-		abs(new_charge - Bateria::MIN_CAPACITY) ? Bateria::AVAILABLE:
+		new_charge < Bateria::MIN_CAPACITY ? Bateria::EMPTY :
+		new_charge >= Bateria::MIN_CAPACITY && new_charge < this->CAPACITY ? Bateria::AVAILABLE:
 		Bateria::FULL
 	);
 	
@@ -119,6 +123,7 @@ double Bateria::new_current_charge(const VTime &update_time)
 {
 	const double delta = this->energy_from_generators - this->energy_sending;
 	double res = this->charge + delta * (update_time - this->last_update).asMsecs() / 1000;
+	// TODO: Considerar tomar el max(0, posible valor en el que se consume mucho, y qued negativo res)
 	res = min(res, Bateria::CAPACITY);
 	return res;
 }
@@ -126,15 +131,20 @@ double Bateria::new_current_charge(const VTime &update_time)
 void Bateria::update_next_event()
 {
 	const double delta = this->energy_from_generators - this->energy_sending;
-	if(delta == 0){
+	// Maybe use delta < EPSILON, for a little number EPSILON
+	if(abs(delta) < eps){
 		nextChange(VTime::Inf); 
 	} else if (delta < 0){
+		// Consuming more than the energy being generated, battery discharging
 		const double remaining_seconds = this->charge / -delta;
 		nextChange(to_VTime(remaining_seconds));
 	} else if (this->charge < Bateria::MIN_CAPACITY){
+		// To to be able to provide power to controller
 		const double time_to_availability = (Bateria::MIN_CAPACITY - this->charge) / delta;
 		nextChange(to_VTime(time_to_availability));
 	} else {
+		// Charging. delta > 0
+		// TODO: Consider case in which te battery is fully charged
 		const double time_to_full =  (Bateria::CAPACITY - this->charge) / delta;
 		nextChange(to_VTime(time_to_full));
 	}
