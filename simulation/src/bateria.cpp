@@ -133,6 +133,7 @@ double Bateria::new_current_charge(const VTime &update_time)
 {
 	const double chargingRate = this->energy_from_generators - this->energy_sending;
 	// Convert time difference back to hours
+	// Refer to https://answers.energysage.com/question/102/if-a-solar-panel-is-rated-at-300w-how-much-power-will-it-produce/
 	double timeSinceLastUpdate = (update_time - this->last_update).asMsecs() / (1000 * 3600);
 	double res = this->charge + chargingRate * timeSinceLastUpdate;
 
