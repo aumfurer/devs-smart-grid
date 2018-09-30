@@ -15,14 +15,17 @@
 
 using namespace std;
 
-
 Bateria::Bateria(const string &name) :
 	Atomic(name),
 
-	energy_in(addInputPort("energy_in")),
-	required_energy(addInputPort("required_energy")),
-	battery_state(addOutputPort("battery_state")),
+	// Input ports
+	energy_in(			addInputPort("energy_in")),
+	required_energy(	addInputPort("required_energy")),
 
+	// Output ports
+	battery_state(		addOutputPort("battery_state")),
+
+	// State variables initialization
 	energy_from_generators(0),
     energy_sending(0),
     charge(0),

@@ -13,8 +13,10 @@ using namespace std;
 
 GeneradorEolico::GeneradorEolico(const string &name) :
 	Atomic(name),
+
 	wind_charge(addInputPort("wind_change")),
 	out(addOutputPort("out")),
+
 	on(true),
 	factor(1.0),
 	energia_produciendo(0),
@@ -33,7 +35,10 @@ Model &GeneradorEolico::externalFunction(const ExternalMessage &msg)
 {
 	this->energia_produciendo_previo = this->energia_produciendo;
 	double radiacion = Real::from_value(msg.value()).value();
+
+	// TODO: Cambiar esta forma de calcular la energía producida, y extraerla a un método
 	this->energia_produciendo = radiacion * this->factor;
+
 	holdIn(AtomicState::active, VTime::Zero);
 	return *this;
 }
@@ -48,7 +53,7 @@ Model &GeneradorEolico::internalFunction(const InternalMessage &)
 
 Model &GeneradorEolico::outputFunction(const CollectMessage &msg)
 {
-	auto delta_energia = Real(this->energia_produciendo - this->energia_produciendo_previo);
-	sendOutput(msg.time(), out, delta_energia);
+	auto energiaSiendoProducida = Real(this->energia_produciendo);
+	sendOutput(msg.time(), out, energiaSiendoProducida);
 	return *this ;
 }

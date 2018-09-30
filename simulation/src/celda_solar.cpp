@@ -12,8 +12,13 @@ using namespace std;
 
 CeldaSolar::CeldaSolar(const string &name) :
 	Atomic(name),
-	solar_change(addInputPort("solar_change")),
-	out(addOutputPort("out")),
+
+	// Input ports
+	solar_change(		addInputPort("solar_change")),
+	// Output ports
+	out(				addOutputPort("out")),
+
+	// Variables de estado
 	on(true),
 	factor(1.0),
 	energia_produciendo(0),
@@ -21,13 +26,11 @@ CeldaSolar::CeldaSolar(const string &name) :
 {
 }
 
-
 Model &CeldaSolar::initFunction()
 {
 	holdIn(AtomicState::active, VTime::Inf);
 	return *this;
 }
-
 
 /* 
 	Como "solar_change" es el úncio input_port de una CeldaSolar,
@@ -38,7 +41,11 @@ Model &CeldaSolar::externalFunction(const ExternalMessage &msg)
 {
 	this->energia_produciendo_previo = this->energia_produciendo;
 	double radiacion = Real::from_value(msg.value()).value();
+
+	// TODO: Cambiar esta forma de calcular la energía producida, y extraerla a un método
 	this->energia_produciendo = radiacion * this->factor;
+
+	// Hack para hacer una transición interna luego de recibir una novedad
 	holdIn(AtomicState::active, VTime::Zero);
 	return *this;
 }
@@ -53,7 +60,8 @@ Model &CeldaSolar::internalFunction(const InternalMessage &)
 
 Model &CeldaSolar::outputFunction(const CollectMessage &msg)
 {
-	auto delta_energia = Real(this->energia_produciendo - this->energia_produciendo_previo);
-	sendOutput(msg.time(), out, delta_energia);
+	// Enviar novedad por outport indicando la nueva cantidad de energía siendo generada
+	auto produccionDeEnergiaActual = Real(this->energia_produciendo);
+	sendOutput(msg.time(), out, produccionDeEnergiaActual);
 	return *this ;
 }
