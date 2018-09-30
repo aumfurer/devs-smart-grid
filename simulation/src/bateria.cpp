@@ -20,12 +20,16 @@ Bateria::Bateria(const string &name) :
 	Atomic(name),
 
 	// Input ports
-	energy_in(			addInputPort("energy_in")),
-	required_energy(	addInputPort("required_energy")),
+	windTurbineEnergyIn(addInputPort("wind_turbine")),
+	solarPanelEnergyIn(addInputPort("solar_panel")),
+	required_energy(addInputPort("required_energy")),
 
 	// Output ports
-	battery_state(		addOutputPort("battery_state")),
+	battery_state(addOutputPort("battery_state")),
 
+
+    solarPanelPower(0),
+    windTurbinePower(0),
 	energy_from_generators(0),
     energy_sending(0),
     charge(0),
@@ -48,11 +52,18 @@ Model &Bateria::externalFunction(const ExternalMessage &msg)
 	this->last_update = update_time;
 	
 	double value = Real::from_value(msg.value()).value();
-	if(msg.port() == this->energy_in){
+	if(msg.port() == this->solarPanelEnergyIn){
 		// Message comes from generators
 		// Changed this to take just the new amount of power being generated, instead of delta
 		// Easier to interpret in messages later
-		this->energy_from_generators = value;
+		this->solarPanelPower = value;
+		this->updateGeneratedPower();
+	} else if(msg.port() == this->windTurbineEnergyIn){
+		// Message comes from generators
+		// Changed this to take just the new amount of power being generated, instead of delta
+		// Easier to interpret in messages later
+		this->windTurbinePower = value;
+		this->updateGeneratedPower();
 	} else if(msg.port() == this->required_energy){
 		// Message comes from controller
 
@@ -66,7 +77,6 @@ Model &Bateria::externalFunction(const ExternalMessage &msg)
 	cout << msg.time() << " " << this->charge << " (ext)" << endl;
 	return *this;
 }
-
 
 Model &Bateria::internalFunction(const InternalMessage &msg)
 {
@@ -162,4 +172,8 @@ VTime Bateria::to_VTime(double v){
 	// 3600 sec == 1 hour
 	float hoursIntoMiliseconds = (float) v * 3600.0f * 1000.0f;
 	return VTime(0,0,0,0, hoursIntoMiliseconds);
+}
+
+void Bateria::updateGeneratedPower() {
+	this->energy_from_generators = this->solarPanelPower + this->windTurbinePower;
 }

@@ -8,6 +8,6 @@ in : radiation
 
 link : radiation solar_change@celda_solar
 
-link : out@celda_solar energy_in@bateria 
+link : out@celda_solar solar_panel@bateria 
 
 link : battery_state@bateria out_port

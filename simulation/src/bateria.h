@@ -30,9 +30,13 @@ class Bateria : public Atomic {
     Model &outputFunction( const CollectMessage & );
 
   private:
-    const Port &energy_in;
+    const Port &solarPanelEnergyIn;
+    const Port &windTurbineEnergyIn;
     const Port &required_energy;
     Port &battery_state;
+
+    double solarPanelPower;
+    double windTurbinePower;
 
     double energy_from_generators;
     double energy_sending;
@@ -43,6 +47,7 @@ class Bateria : public Atomic {
     // void update_current_charge(const VTime &update_time);
     double new_current_charge(const VTime &update_time);
     void update_next_event();
+    void updateGeneratedPower();
 
     VTime to_VTime(double v);
 };
