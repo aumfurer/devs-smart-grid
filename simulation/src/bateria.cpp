@@ -121,8 +121,11 @@ Model &Bateria::outputFunction(const CollectMessage &msg)
 
 double Bateria::new_current_charge(const VTime &update_time)
 {
-	const double delta = this->energy_from_generators - this->energy_sending;
-	double res = this->charge + delta * (update_time - this->last_update).asMsecs() / 1000;
+	const double chargingRate = this->energy_from_generators - this->energy_sending;
+	// Convert time difference back to hours
+	double timeSinceLastUpdate = (update_time - this->last_update).asMsecs() / (1000 * 3600);
+	double res = this->charge + chargingRate * timeSinceLastUpdate;
+
 	// TODO: Considerar tomar el max(0, posible valor en el que se consume mucho, y qued negativo res)
 	res = min(res, Bateria::CAPACITY);
 	return res;
@@ -150,7 +153,13 @@ void Bateria::update_next_event()
 	}
 }
 
+/*
+	Converts a value of v hours, into a VTime struct.
+*/
 VTime Bateria::to_VTime(double v){
-	VTime res = VTime(0,0,0,0, (float)(v)*1000);
-	return res;
+	// The last parameter in VTime constructor is miliSeconds, and since
+	// power over time mesasures are in hours, should use it instead of secs.
+	// 3600 sec == 1 hour
+	float hoursIntoMiliseconds = (float) v * 3600.0f * 1000.0f;
+	return VTime(0,0,0,0, hoursIntoMiliseconds);
 }
