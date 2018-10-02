@@ -11,7 +11,7 @@
 
 #include "bateria.h"
 
-#define eps 1e-5
+#define eps 1e-7
 
 using namespace std;
 
@@ -71,7 +71,7 @@ Model &Bateria::externalFunction(const ExternalMessage &msg)
 			this->energy_sending == 0 &&
 			this->charge < Bateria::MIN_CAPACITY;
 			
-		this->energy_sending = still_waiting_for_available ? 0: value;
+		this->energy_sending = still_waiting_for_available ? 0: value / (3600 * 1000);
 	}
 	this->update_next_event();
 	cout << msg.time() << " " << this->charge << " (ext)" << endl;
@@ -84,7 +84,6 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 
 	this->charge = this->new_current_charge(msg.time());
 	this->last_update = update_time;
-	
 
 	if (this->charge < eps){
 		// Se termino la bateria
@@ -134,7 +133,7 @@ double Bateria::new_current_charge(const VTime &update_time)
 	const double chargingRate = this->energy_from_generators - this->energy_sending;
 	// Convert time difference back to hours
 	// Refer to https://answers.energysage.com/question/102/if-a-solar-panel-is-rated-at-300w-how-much-power-will-it-produce/
-	double timeSinceLastUpdate = (update_time - this->last_update).asMsecs() / (1000 * 3600);
+	double timeSinceLastUpdate = (update_time - this->last_update).asMsecs();
 	double res = this->charge + chargingRate * timeSinceLastUpdate;
 
 	// TODO: Considerar tomar el max(0, posible valor en el que se consume mucho, y qued negativo res)
@@ -148,9 +147,12 @@ void Bateria::update_next_event()
 	// Maybe use delta < EPSILON, for a little number EPSILON
 	if(abs(delta) < eps){
 		nextChange(VTime::Inf); 
-	} else if (delta < 0){
+	} else if (delta < -eps){
 		// Consuming more than the energy being generated, battery discharging
 		const double remaining_seconds = this->charge / -delta;
+		cout << "consumming " <<  to_VTime(remaining_seconds) << endl;
+		cout << this->charge << " " << delta << endl;
+		cout << this->energy_from_generators << " " << this->energy_sending << endl;
 		nextChange(to_VTime(remaining_seconds));
 	} else if (this->charge < Bateria::MIN_CAPACITY){
 		// To to be able to provide power to controller
@@ -171,10 +173,11 @@ VTime Bateria::to_VTime(double v){
 	// The last parameter in VTime constructor is miliSeconds, and since
 	// power over time mesasures are in hours, should use it instead of secs.
 	// 3600 sec == 1 hour
-	float hoursIntoMiliseconds = (float) v * 3600.0f * 1000.0f;
-	return VTime(0,0,0,0, hoursIntoMiliseconds);
+	// float hoursIntoMiliseconds = (float) v * 3600.0f * 1000.0f;
+	// return VTime(0,0,0,0, hoursIntoMiliseconds);
+	return VTime(0,0,0,0, (float)v);
 }
 
 void Bateria::updateGeneratedPower() {
-	this->energy_from_generators = this->solarPanelPower + this->windTurbinePower;
+	this->energy_from_generators = (this->solarPanelPower + this->windTurbinePower) / (1000 * 3600);
 }
