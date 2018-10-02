@@ -12,9 +12,11 @@
 #include "bateria.h"
 
 #define eps 1e-7
+#define eps_charge 1
 
 using namespace std;
 
+#define dbg(x) cout << #x << " is " << (x) << endl
 
 Bateria::Bateria(const string &name) :
 	Atomic(name),
@@ -85,7 +87,7 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 	this->charge = this->new_current_charge(msg.time());
 	this->last_update = update_time;
 
-	if (this->charge < eps){
+	if (this->charge < eps_charge){
 		// Se termino la bateria
 		this->energy_sending = 0;
 		this->charge = 0;
@@ -94,7 +96,7 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 		} else {
 			nextChange(VTime::Inf);
 		}
-	} else if (abs(this->charge - Bateria::MIN_CAPACITY) < eps){
+	} else if (abs(this->charge - Bateria::MIN_CAPACITY) < eps_charge){
 		const double delta = this->energy_from_generators - this->energy_sending;
 		if (delta > 0){
 			const double time_to_full = (Bateria::CAPACITY - this->charge) / delta;
@@ -105,7 +107,7 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 	} else {
 		// Se lleno la bateria (no hago nada?)
 		assert(this->energy_from_generators > this->energy_sending);
-		assert(abs(this->charge - Bateria::CAPACITY) < eps);
+		assert(abs(this->charge - Bateria::CAPACITY) < eps_charge);
 		nextChange(VTime::Inf);
 	}
 
@@ -137,7 +139,8 @@ double Bateria::new_current_charge(const VTime &update_time)
 	double res = this->charge + chargingRate * timeSinceLastUpdate;
 
 	// TODO: Considerar tomar el max(0, posible valor en el que se consume mucho, y qued negativo res)
-	res = min(res, Bateria::CAPACITY);
+	// RES: no deberia pasar nunca si no hubieran errores de precision
+	res = max(0.0, min(res, Bateria::CAPACITY));
 	return res;
 }
 
@@ -145,14 +148,12 @@ void Bateria::update_next_event()
 {
 	const double delta = this->energy_from_generators - this->energy_sending;
 	// Maybe use delta < EPSILON, for a little number EPSILON
+	dbg(delta);
 	if(abs(delta) < eps){
 		nextChange(VTime::Inf); 
 	} else if (delta < -eps){
 		// Consuming more than the energy being generated, battery discharging
 		const double remaining_seconds = this->charge / -delta;
-		cout << "consumming " <<  to_VTime(remaining_seconds) << endl;
-		cout << this->charge << " " << delta << endl;
-		cout << this->energy_from_generators << " " << this->energy_sending << endl;
 		nextChange(to_VTime(remaining_seconds));
 	} else if (this->charge < Bateria::MIN_CAPACITY){
 		// To to be able to provide power to controller
