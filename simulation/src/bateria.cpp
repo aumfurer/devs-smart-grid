@@ -73,6 +73,7 @@ Model &Bateria::externalFunction(const ExternalMessage &msg)
 			this->energy_sending == 0 &&
 			this->charge < Bateria::MIN_CAPACITY;
 			
+		// Required energy received from controller is converted into Watts/ms
 		this->energy_sending = still_waiting_for_available ? 0: value / (3600 * 1000);
 	}
 	this->update_next_event();
@@ -149,21 +150,27 @@ void Bateria::update_next_event()
 	const double delta = this->energy_from_generators - this->energy_sending;
 	// Maybe use delta < EPSILON, for a little number EPSILON
 	dbg(delta);
-	if(abs(delta) < eps){
-		nextChange(VTime::Inf); 
-	} else if (delta < -eps){
+	if (abs(delta) < eps) {
+		passivate();
+	} else if (delta < -eps) {
 		// Consuming more than the energy being generated, battery discharging
 		const double remaining_seconds = this->charge / -delta;
 		nextChange(to_VTime(remaining_seconds));
-	} else if (this->charge < Bateria::MIN_CAPACITY){
-		// To to be able to provide power to controller
-		const double time_to_availability = (Bateria::MIN_CAPACITY - this->charge) / delta;
-		nextChange(to_VTime(time_to_availability));
 	} else {
-		// Charging. delta > 0
-		// TODO: Consider case in which te battery is fully charged
-		const double time_to_full =  (Bateria::CAPACITY - this->charge) / delta;
-		nextChange(to_VTime(time_to_full));
+		// delta > eps
+		if (this->charge < Bateria::MIN_CAPACITY) {
+			// To to be able to provide power to controller
+			const double time_to_availability = (Bateria::MIN_CAPACITY - this->charge) / delta;
+			nextChange(to_VTime(time_to_availability));
+		} else if (abs(this->charge - Bateria::CAPACITY) < eps) {
+			// Full charge and still charging
+			passivate();
+		} else {
+			// Charging. delta > 0
+			// TODO: Consider case in which te battery is fully charged
+			const double time_to_full =  (Bateria::CAPACITY - this->charge) / delta;
+			nextChange(to_VTime(time_to_full));
+		}
 	}
 }
 
@@ -179,6 +186,7 @@ VTime Bateria::to_VTime(double v){
 	return VTime(0,0,0,0, (float)v);
 }
 
+// Updates the energy being generated towards the battery, in a rate of Watts over miliseconds.
 void Bateria::updateGeneratedPower() {
 	this->energy_from_generators = (this->solarPanelPower + this->windTurbinePower) / (1000 * 3600);
 }
