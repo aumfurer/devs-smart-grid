@@ -41,6 +41,7 @@ class Bateria : public Atomic {
     double energy_from_generators;
     double energy_sending;
     double charge;
+    double energyRequiredByLoad;
     VTime last_update;
     // int next_state;
 
@@ -48,6 +49,8 @@ class Bateria : public Atomic {
     double new_current_charge(const VTime &update_time);
     void update_next_event();
     void updateGeneratedPower();
+
+    double WattsToWattsPerMsecond(double);
 
     VTime to_VTime(double v);
 };

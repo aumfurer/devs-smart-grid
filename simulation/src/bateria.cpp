@@ -40,7 +40,8 @@ Bateria::Bateria(const string &name) :
 	energy_from_generators(0),
     energy_sending(0),
     charge(0),
-    last_update(0)
+    last_update(0),
+	energyRequiredByLoad(0)
 {
 }
 
@@ -73,17 +74,24 @@ Model &Bateria::externalFunction(const ExternalMessage &msg)
 		this->updateGeneratedPower();
 	} else if(msg.port() == this->required_energy){
 		// Message comes from controller
+		this->energyRequiredByLoad = value;
 
 		bool still_waiting_for_available = 
-			this->energy_sending == 0 &&
+			this->energy_sending < eps &&
 			this->charge < Bateria::MIN_CAPACITY;
 			
 		// Required energy received from controller is converted into Watts/ms
-		this->energy_sending = still_waiting_for_available ? 0: value / (3600 * 1000);
+		this->energy_sending = still_waiting_for_available ? 0: WattsToWattsPerMsecond(value);
 	}
 	this->update_next_event();
 	cout << msg.time() << " " << this->charge << " (ext)" << endl;
 	return *this;
+}
+
+double Bateria::WattsToWattsPerMsecond(double aValue) 
+{
+	// Converta a "Watts per hour" to a "Watts per mili second" value
+	return aValue / (3600 * 1000);
 }
 
 Model &Bateria::internalFunction(const InternalMessage &msg)
@@ -103,6 +111,7 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 			nextChange(VTime::Inf);
 		}
 	} else if (abs(this->charge - Bateria::MIN_CAPACITY) < eps_charge){
+		this->energy_sending = WattsToWattsPerMsecond(this->energyRequiredByLoad);
 		const double delta = this->energy_from_generators - this->energy_sending;
 		if (delta > 0){
 			const double time_to_full = (Bateria::CAPACITY - this->charge) / delta;
