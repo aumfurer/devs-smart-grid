@@ -121,10 +121,8 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 	return *this;
 }
 
-
 Model &Bateria::outputFunction(const CollectMessage &msg)
 {
-
 	double new_charge = this->new_current_charge(msg.time());
 	// estoy aca porque ocurrio un evento
 	sendOutput(msg.time(), this->battery_state, 
@@ -160,6 +158,7 @@ void Bateria::update_next_event()
 	} else if (delta < -eps) {
 		// Consuming more than the energy being generated, battery discharging
 		const double remaining_seconds = this->charge / -delta;
+		// TODO: Consider case in which battery is empty, and current demand is greater or equal than energy being generated?
 		nextChange(to_VTime(remaining_seconds));
 	} else {
 		// delta > eps
