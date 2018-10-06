@@ -5,9 +5,18 @@
 
 #include "atomic.h"
 #include "VTime.h"
+#include "bateria.h"
 
+#define BATTERY_STATE_PORT "battery_state"
+#define LOAD_DEMAND_PORT "load_demand"
+
+    // Output ports
+#define GRID_DEMAND_PORT "grid_demand"
+#define BATTERY_DEMAND_PORT "battery_demand"
 
 #define CONTROLLER_NAME "controller"
+
+#define MessageValueAsDouble(aMessage) Real::from_value(aMessage.value()).value()
 
 class Controller : public Atomic 
 {
@@ -25,13 +34,21 @@ class Controller : public Atomic
   private:
 
     // Input ports
-    const Port &batteryState;
+    const Port &batteryStatePort;
     const Port &loadDemand;
 
     // Output ports
-    Port &gridDemand;
-    Port &batteryDemand;
+    Port &gridDemandPort;
+    Port &batteryDemandPort;
 
+    // State variables
+    int batteryState;
+    double currentLoadDemand; 
+    double batteryDemand;
+    double gridDemand;
+
+    // Helper methods
+    void updateGridConsumption();
 };
 
 #endif
