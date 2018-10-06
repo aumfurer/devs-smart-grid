@@ -27,10 +27,12 @@ Model& Controller::initFunction() {
 Model& Controller::externalFunction( const ExternalMessage &aMessage) {
     if (aMessage.port() == this->batteryStatePort) {
         int newBatteryState = (int) std::round(MessageValueAsDouble(aMessage));
+        cerr << "New battery state arrive: " << newBatteryState << endl;
         this->batteryState = newBatteryState;
     } else 
     if (aMessage.port() == this->loadDemand) {
         this->currentLoadDemand = MessageValueAsDouble(aMessage);
+        cerr << "New load demand: " << this->currentLoadDemand << endl;
     }
     updateGridConsumption();
     // Schedule an internal transition to propagate demand changes
@@ -58,6 +60,7 @@ void Controller::updateGridConsumption() {
 
 Model& Controller::internalFunction( const InternalMessage &aMessage) {
     nextChange(VTime::Inf);
+    return *this;
     // passivate();
 }
 
