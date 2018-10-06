@@ -3,6 +3,8 @@
 simulation/src/bin/
 simulation/src/bin/*
 simulation/src/output
+simulation/src/out/
+simulation/src/out/*
 
 Notebooks/.ipynb_checkpoints/*
 Notebooks/.ipynb_checkpoints/
