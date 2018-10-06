@@ -57,7 +57,8 @@ void Controller::updateGridConsumption() {
 }
 
 Model& Controller::internalFunction( const InternalMessage &aMessage) {
-    passivate();
+    nextChange(VTime::Inf);
+    // passivate();
 }
 
 Model& Controller::outputFunction( const CollectMessage &aMessage) {

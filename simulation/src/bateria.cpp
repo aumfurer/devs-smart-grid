@@ -34,7 +34,6 @@ Bateria::Bateria(const string &name) :
 	// Output ports
 	battery_state(addOutputPort("battery_state")),
 
-
     solarPanelPower(0),
     windTurbinePower(0),
 	energy_from_generators(0),
@@ -51,7 +50,6 @@ Model &Bateria::initFunction()
 	holdIn(AtomicState::active, VTime::Inf);
 	return *this;
 }
-
 
 Model &Bateria::externalFunction(const ExternalMessage &msg)
 {
@@ -84,7 +82,7 @@ Model &Bateria::externalFunction(const ExternalMessage &msg)
 		this->energy_sending = still_waiting_for_available ? 0: WattsToWattsPerMsecond(value);
 	}
 	this->update_next_event();
-	cout << msg.time() << " " << this->charge << " (ext)" << endl;
+	cout << msg.time() << " " << this->charge << " (ext)" << " sent by " << msg.senderModelId() << endl;
 	return *this;
 }
 
@@ -173,8 +171,12 @@ void Bateria::update_next_event()
 		// delta > eps
 		if (this->charge < Bateria::MIN_CAPACITY) {
 			// To to be able to provide power to controller
-			const double time_to_availability = (Bateria::MIN_CAPACITY - this->charge) / delta;
-			nextChange(to_VTime(time_to_availability));
+			const double mSecondsToAvailability = (Bateria::MIN_CAPACITY - this->charge) / delta;
+			VTime timeToAvailability = to_VTime(mSecondsToAvailability);
+
+			cout << "Time to availability: " << timeToAvailability << endl;
+
+			nextChange(timeToAvailability);
 		} else if (abs(this->charge - Bateria::CAPACITY) < eps) {
 			// Full charge and still charging
 			passivate();
