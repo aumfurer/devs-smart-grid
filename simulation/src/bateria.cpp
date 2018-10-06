@@ -18,6 +18,11 @@ using namespace std;
 
 #define dbg(x) cout << #x << " is " << (x) << endl
 
+
+double Bateria::CAPACITY = 500.0;
+double Bateria::MAXIMUM_POWER = 500.0;
+double Bateria::MIN_CAPACITY = 100.0;
+
 Bateria::Bateria(const string &name) :
 	Atomic(name),
 

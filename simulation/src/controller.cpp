@@ -1,3 +1,4 @@
+#include "bateria.h"
 #include "controller.h"
 
 Controller::Controller(const string &name) :
@@ -13,7 +14,7 @@ Controller::Controller(const string &name) :
 
     // State variables
     batteryState(Bateria::EMPTY),
-    currentLoadDemand(0.0)
+    currentLoadDemand(0.0),
     batteryDemand(0.0),
     gridDemand(0.0)
 {}
@@ -24,11 +25,11 @@ Model& Controller::initFunction() {
 }
 
 Model& Controller::externalFunction( const ExternalMessage &aMessage) {
-    if (aMessage.port() == BATTERY_STATE_PORT) {
+    if (aMessage.port() == this->batteryStatePort) {
         int newBatteryState = (int) std::round(MessageValueAsDouble(aMessage));
         this->batteryState = newBatteryState;
     } else 
-    if (aMessage.port() == LOAD_DEMAND_PORT) {
+    if (aMessage.port() == this->loadDemand) {
         this->currentLoadDemand = MessageValueAsDouble(aMessage);
     }
     updateGridConsumption();
@@ -38,7 +39,6 @@ Model& Controller::externalFunction( const ExternalMessage &aMessage) {
 }
 
 void Controller::updateGridConsumption() {
-    this->gridDemand = this->currentLoadDemand - this->currentBatteryCharge;
     if (this->batteryState == Bateria::AVAILABLE || 
         this->batteryState == Bateria::FULL) {
         // Battery available to use as supply

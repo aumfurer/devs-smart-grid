@@ -5,7 +5,6 @@
 
 #include "atomic.h"
 #include "VTime.h"
-#include "bateria.h"
 
 #define BATTERY_STATE_PORT "battery_state"
 #define LOAD_DEMAND_PORT "load_demand"

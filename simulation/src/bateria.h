@@ -9,20 +9,19 @@
 
 #define BATERIA_NAME "bateria"
 
-
 class Bateria : public Atomic {
   public:
 
     Bateria(const string &name = BATERIA_NAME );
     virtual string className() const {  return BATERIA_NAME ;}
   
-    const double CAPACITY = 500.0;
-    const double MAXIMUM_POWER = 500.0;
-    const double MIN_CAPACITY = 100.0;
+    static double CAPACITY;
+    static double MAXIMUM_POWER;
+    static double MIN_CAPACITY;
 
-    const int EMPTY = 0;
-    const int AVAILABLE = 1;
-    const int FULL = 2;
+    const static int EMPTY = 0;
+    const static int AVAILABLE = 1;
+    const static int FULL = 2;
 
   protected:
     Model &initFunction();
