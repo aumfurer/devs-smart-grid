@@ -43,7 +43,16 @@ Model &CeldaSolar::externalFunction(const ExternalMessage &msg)
 	double radiacion = Real::from_value(msg.value()).value();
 
 	// TODO: Cambiar esta forma de calcular la energía producida, y extraerla a un método
-	this->energia_produciendo = radiacion * this->factor;
+	// https://www.energuide.be/en/questions-answers/what-is-the-kilowatt-peak/1409/
+	// According to this, a solar panel energy generation is measure by a unit called Watt-peak
+	// which is the maximum amount of power generated in optimal conditions.
+	
+	// radiacion in Watts/m^2
+	// producedEnergy = radiacion / 1000 * PeakPower
+
+	// TODO: Refactor this to be taken as parameter
+	double PeakPower = 40.0;
+	this->energia_produciendo = radiacion / 1000 * PeakPower;
 
 	// Hack para hacer una transición interna luego de recibir una novedad
 	holdIn(AtomicState::active, VTime::Zero);
