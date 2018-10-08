@@ -34,6 +34,7 @@ class Bateria : public Atomic {
     const Port &windTurbineEnergyIn;
     const Port &required_energy;
     Port &battery_state;
+    Port &surplus_energy;
 
     double solarPanelPower;
     double windTurbinePower;
@@ -51,6 +52,7 @@ class Bateria : public Atomic {
     void updateGeneratedPower();
 
     double WattsToWattsPerMsecond(double);
+    double WattsPerMsecondToWatts(double);
 
     VTime to_VTime(double v);
 };
