@@ -33,6 +33,7 @@ Bateria::Bateria(const string &name) :
 
 	// Output ports
 	battery_state(addOutputPort("battery_state")),
+	surplus_energy(addOutputPort("surplus_energy")),
 
     solarPanelPower(0),
     windTurbinePower(0),
@@ -92,6 +93,12 @@ double Bateria::WattsToWattsPerMsecond(double aValue)
 	return aValue / (3600 * 1000);
 }
 
+double Bateria::WattsPerMsecondToWatts(double aValue) 
+{
+	// Converta a "Watts per hour" to a "Watts per mili second" value
+	return aValue * (3600 * 1000);
+}
+
 Model &Bateria::internalFunction(const InternalMessage &msg)
 {
 	VTime update_time = msg.time();
@@ -109,11 +116,15 @@ Model &Bateria::internalFunction(const InternalMessage &msg)
 			nextChange(VTime::Inf);
 		}
 	} else if (abs(this->charge - Bateria::MIN_CAPACITY) < eps_charge){
+
 		this->energy_sending = WattsToWattsPerMsecond(this->energyRequiredByLoad);
 		const double delta = this->energy_from_generators - this->energy_sending;
 		if (delta > 0){
 			const double time_to_full = (Bateria::CAPACITY - this->charge) / delta;
 			nextChange(to_VTime(time_to_full));
+		} else if (delta < 0){
+			const double time_to_empty = (this->charge) / -delta;
+			nextChange(to_VTime(time_to_empty));
 		} else {
 			nextChange(VTime::Inf);
 		}
@@ -132,11 +143,17 @@ Model &Bateria::outputFunction(const CollectMessage &msg)
 {
 	double new_charge = this->new_current_charge(msg.time());
 	// estoy aca porque ocurrio un evento
-	sendOutput(msg.time(), this->battery_state, 
-		new_charge < Bateria::MIN_CAPACITY ? Bateria::EMPTY :
-		new_charge >= Bateria::MIN_CAPACITY && new_charge < this->CAPACITY ? Bateria::AVAILABLE:
-		Bateria::FULL
-	);
+	auto state = 
+		new_charge < Bateria::MIN_CAPACITY - eps ? Bateria::EMPTY :
+		new_charge >= Bateria::MIN_CAPACITY - eps && new_charge < this->CAPACITY ? Bateria::AVAILABLE:
+		Bateria::FULL;
+
+	sendOutput(msg.time(), this->battery_state, state);
+
+	if(state == Bateria::FULL){
+		auto energy = WattsPerMsecondToWatts(this->energy_from_generators - this->energy_sending);
+		sendOutput(msg.time(), this->surplus_energy, energy);	
+	}
 	
 	return *this ;
 }
@@ -179,7 +196,8 @@ void Bateria::update_next_event()
 			nextChange(timeToAvailability);
 		} else if (abs(this->charge - Bateria::CAPACITY) < eps) {
 			// Full charge and still charging
-			passivate();
+			// passivate();
+			nextChange(VTime::Zero);
 		} else {
 			// Charging. delta > 0
 			// TODO: Consider case in which te battery is fully charged
