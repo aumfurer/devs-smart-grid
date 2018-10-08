@@ -8,6 +8,7 @@
 
 #define BATTERY_STATE_PORT "battery_state"
 #define LOAD_DEMAND_PORT "load_demand"
+#define BATTERY_SURPLUS_ENERGY_PORT "load_demand"
 
     // Output ports
 #define GRID_DEMAND_PORT "grid_demand"
@@ -34,6 +35,7 @@ class Controller : public Atomic
 
     // Input ports
     const Port &batteryStatePort;
+    const Port &batterySurplusEnergy;
     const Port &loadDemand;
 
     // Output ports
