@@ -96,7 +96,8 @@ double Bateria::WattsToWattsPerMsecond(double aValue)
 double Bateria::WattsPerMsecondToWatts(double aValue) 
 {
 	// Converta a "Watts per hour" to a "Watts per mili second" value
-	return aValue * (3600 * 1000);
+	return aValue;
+	// return aValue * (3600 * 1000);
 }
 
 Model &Bateria::internalFunction(const InternalMessage &msg)
@@ -152,7 +153,7 @@ Model &Bateria::outputFunction(const CollectMessage &msg)
 
 	if(state == Bateria::FULL){
 		auto energy = WattsPerMsecondToWatts(this->energy_from_generators - this->energy_sending);
-		sendOutput(msg.time(), this->surplus_energy, energy);	
+		sendOutput(msg.time(), this->surplus_energy, max(0.0, energy));	
 	}
 	
 	return *this ;

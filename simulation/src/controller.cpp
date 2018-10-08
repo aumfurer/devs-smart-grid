@@ -7,7 +7,7 @@ Controller::Controller(const string &name) :
     // Input ports
     batteryStatePort(addInputPort(BATTERY_STATE_PORT)),
     loadDemand(addInputPort(LOAD_DEMAND_PORT)),
-   batterySurplusEnergy(addInputPort(BATTERY_SURPLUS_ENERGY_PORT)),
+    batterySurplusEnergy(addInputPort(BATTERY_SURPLUS_ENERGY_PORT)),
 
     // Output ports
     gridDemandPort(addOutputPort(GRID_DEMAND_PORT)),
@@ -38,6 +38,7 @@ Model& Controller::externalFunction( const ExternalMessage &aMessage) {
         updateGridConsumption();
     } else
     if (aMessage.port() == this->batterySurplusEnergy){
+        cout << "########## " << MessageValueAsDouble(aMessage) << endl;
         this->gridDemand = -MessageValueAsDouble(aMessage);
     }
     // Schedule an internal transition to propagate demand changes

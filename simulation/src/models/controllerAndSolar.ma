@@ -12,6 +12,7 @@ link : out@celda_solar solar_panel@bateria
 link : battery_demand@controlador required_energy@bateria 
 
 link : battery_state@bateria battery_state@controlador
+link : surplus_energy@bateria battery_surplus_energy@controlador
 link : grid_demand@controlador grid_out
 
 link : battery_demand@controlador controlBatteryDemand 

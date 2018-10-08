@@ -8,7 +8,7 @@
 
 #define BATTERY_STATE_PORT "battery_state"
 #define LOAD_DEMAND_PORT "load_demand"
-#define BATTERY_SURPLUS_ENERGY_PORT "load_demand"
+#define BATTERY_SURPLUS_ENERGY_PORT "battery_surplus_energy"
 
     // Output ports
 #define GRID_DEMAND_PORT "grid_demand"
