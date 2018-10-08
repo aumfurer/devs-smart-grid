@@ -7,6 +7,7 @@ Controller::Controller(const string &name) :
     // Input ports
     batteryStatePort(addInputPort(BATTERY_STATE_PORT)),
     loadDemand(addInputPort(LOAD_DEMAND_PORT)),
+   batterySurplusEnergy(addInputPort(BATTERY_SURPLUS_ENERGY_PORT)),
 
     // Output ports
     gridDemandPort(addOutputPort(GRID_DEMAND_PORT)),
@@ -29,12 +30,16 @@ Model& Controller::externalFunction( const ExternalMessage &aMessage) {
         int newBatteryState = (int) std::round(MessageValueAsDouble(aMessage));
         cerr << "New battery state arrive: " << newBatteryState << endl;
         this->batteryState = newBatteryState;
+        updateGridConsumption();
     } else 
     if (aMessage.port() == this->loadDemand) {
         this->currentLoadDemand = MessageValueAsDouble(aMessage);
         cerr << "New load demand: " << this->currentLoadDemand << endl;
+        updateGridConsumption();
+    } else
+    if (aMessage.port() == this->batterySurplusEnergy){
+        this->gridDemand = -MessageValueAsDouble(aMessage);
     }
-    updateGridConsumption();
     // Schedule an internal transition to propagate demand changes
     nextChange(VTime::Zero);
     return *this;
@@ -47,8 +52,7 @@ void Controller::updateGridConsumption() {
         if (this->currentLoadDemand < Bateria::MAXIMUM_POWER) {
             // The whole load demand can be supplied by the battery
             this->batteryDemand = this->currentLoadDemand;
-            // Sell the remaining possible powet output to the grid
-            this->gridDemand =  this->currentLoadDemand - Bateria::MAXIMUM_POWER;
+            this->gridDemand = 0;
         } else {
             this->batteryDemand = Bateria::MAXIMUM_POWER;
             this->gridDemand = this->currentLoadDemand - this->batteryDemand;
