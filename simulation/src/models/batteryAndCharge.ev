@@ -1,8 +1,8 @@
-01:00:00:00 radiation 50
+01:00:00:00 radiation 1000
 01:00:00:00 wind_speed 50
 06:00:00:00 power_consumption 100
 06:00:00:00 radiation 0
 06:00:00:00 wind_speed 0
-12:00:00:00 radiation 50
+01:00:00:00 radiation 1000
 12:00:00:00 wind_speed 50
 14:00:00:00 power_consumption 50
