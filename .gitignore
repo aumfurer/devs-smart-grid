@@ -8,3 +8,7 @@ simulation/src/out/*
 
 Notebooks/.ipynb_checkpoints/*
 Notebooks/.ipynb_checkpoints/
+simulation/eventGeneration/.ipynb_checkpoints/
+simulation/eventGeneration/.ipynb_checkpoints/*
+simulation/eventGeneration/household_power_consumption.txt
+simulation/eventGeneration/household_power_consumption.zip
