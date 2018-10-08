@@ -47,7 +47,8 @@ void Controller::updateGridConsumption() {
         if (this->currentLoadDemand < Bateria::MAXIMUM_POWER) {
             // The whole load demand can be supplied by the battery
             this->batteryDemand = this->currentLoadDemand;
-            this->gridDemand = 0;
+            // Sell the remaining possible powet output to the grid
+            this->gridDemand =  this->currentLoadDemand - Bateria::MAXIMUM_POWER;
         } else {
             this->batteryDemand = Bateria::MAXIMUM_POWER;
             this->gridDemand = this->currentLoadDemand - this->batteryDemand;
