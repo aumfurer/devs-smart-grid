@@ -97,7 +97,7 @@ Model &Battery::externalFunction(const ExternalMessage &aMessage)
         else if (totalPower < -EPSILON)
         {
             // Time to empty stored energy
-            nextChange(VTimeFromHours(this->charge / totalPower));
+            nextChange(VTimeFromHours(this->charge / -totalPower));
         }
         else
         {
@@ -145,7 +145,21 @@ Model &Battery::internalFunction(const InternalMessage &aMessage)
     {
         this->stateHasChanged = true;
         this->state = BatteryState::Available;
-        nextChange(VTimeFromHours((double) CAPACITY / totalPower));
+        // TODO: I've already done this check. Refactor this
+        // Consider case in which I already have a demand from the controller, so
+        // totalPower could be negative
+        if (totalPower < -EPSILON)
+        {
+            nextChange(VTimeFromHours((double) this->charge / -totalPower));
+        }
+        else if (totalPower > EPSILON)
+        {
+            nextChange(VTimeFromHours((double) CAPACITY / totalPower));
+        }
+        else
+        {
+            nextChange(VTime::Inf);
+        }
     }
     else if (this->state == BatteryState::Available
         && this->charge < EPSILON)
@@ -167,7 +181,7 @@ Model &Battery::internalFunction(const InternalMessage &aMessage)
     {
         this->stateHasChanged = true;
         this->state = BatteryState::Available;
-        nextChange(VTimeFromHours(this->charge / totalPower));
+        nextChange(VTimeFromHours(this->charge / -totalPower));
     }
     else
     {
@@ -197,7 +211,7 @@ Model &Battery::outputFunction(const CollectMessage &aMessage)
 void Battery::calculateNewCharge(VTime currentTime)
 {
     // Convert elapsed time to hours
-    double elapsedTimeBetweenUpdates = (currentTime - this->lastChargeUpdate).asMsecs() / (3600 * 1000);
+    double elapsedTimeBetweenUpdates = (currentTime - this->lastChargeUpdate).asMsecs() / (double) (3600 * 1000);
     double chargingRate;
     if (this->state == BatteryState::Charging)
     {
