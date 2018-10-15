@@ -72,6 +72,11 @@ Model &Battery2::externalFunction(const ExternalMessage &aMessage)
 
     // Update charge and reset last update time
     this->charge = calculateNewCharge(aMessage.time());
+
+    #ifdef DEBUG
+        cerr << "NewCharge;" << aMessage.time() << ";" << this->charge << endl;
+    #endif
+
     this->lastChargeUpdate = aMessage.time();
 
     this->update_energy_producing(aMessage);
