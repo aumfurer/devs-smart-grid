@@ -6,12 +6,13 @@ Controller::Controller(const string &name) :
 
     // Input ports
     batteryStatePort(addInputPort(BATTERY_STATE_PORT)),
-    loadDemand(addInputPort(LOAD_DEMAND_PORT)),
     batterySurplusEnergy(addInputPort(BATTERY_SURPLUS_ENERGY_PORT)),
-
+    loadDemand(addInputPort(LOAD_DEMAND_PORT)),
+    
     // Output ports
     gridDemandPort(addOutputPort(GRID_DEMAND_PORT)),
     batteryDemandPort(addOutputPort(BATTERY_DEMAND_PORT)),
+    sellingEnergy(addOutputPort(SELLING_ENERGY_PORT)),
 
     // State variables
     batteryState(BatteryState::Empty),
@@ -20,6 +21,8 @@ Controller::Controller(const string &name) :
     gridDemand(0.0),
 
     notifyBattery(false),
+    notifyExtraEnergy(false),
+    extraEnergy(0.0),
     state(ControllerState::AllGrid)
 {}
 
@@ -29,6 +32,14 @@ Model& Controller::initFunction() {
 }
 
 Model& Controller::externalFunction( const ExternalMessage &aMessage) {
+
+    if (aMessage.port() == this->batterySurplusEnergy){
+        this->notifyExtraEnergy = true;
+        this->extraEnergy = MessageValueAsDouble(aMessage);
+        nextChange(VTime::Zero);
+        return *this;
+    }
+
     // New battery state
     if (aMessage.port() == this->batteryStatePort) {
         this->batteryState = (int) std::round(MessageValueAsDouble(aMessage));
@@ -83,11 +94,17 @@ void Controller::updateGridConsumption() {
 }
 
 Model& Controller::internalFunction( const InternalMessage &aMessage) {
+    this->notifyExtraEnergy = false;
     nextChange(VTime::Inf);
     return *this;
 }
 
 Model& Controller::outputFunction( const CollectMessage &aMessage) {
+    if(this->notifyExtraEnergy){
+        sendOutput(aMessage.time(), this->sellingEnergy, this->extraEnergy);
+        return *this;
+    }
+
 	sendOutput(aMessage.time(), this->gridDemandPort, this->gridDemand);
 
     if (this->state == ControllerState::GridAndBattery || this->notifyBattery)
@@ -97,5 +114,5 @@ Model& Controller::outputFunction( const CollectMessage &aMessage) {
         this->notifyBattery = false;
     }
 
-	return *this ;
+	return *this;
 }
