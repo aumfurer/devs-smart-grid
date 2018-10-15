@@ -49,8 +49,7 @@ Battery2::Battery2(const string &name) :
     charge(0),
     state(BatteryState::Empty),
 
-    lastChargeUpdate(VTime::Zero),
-    stateHasChanged(false)
+    lastChargeUpdate(VTime::Zero)
 {
 }
 
@@ -129,6 +128,10 @@ Model &Battery2::externalFunction(const ExternalMessage &aMessage)
     {
         NEXT_CHANGE_AND_LOG(VTime::Zero, aMessage.time());
     }
+    else if (this->state == BatteryState::Full && energy_producing > EPSILON)
+    {
+        NEXT_CHANGE_AND_LOG(VTime::Zero, aMessage.time());
+    }
     // In the case no branch is reached, it means that the battery is in Full or Empty state, and
     // with no transition condition
     else {
@@ -140,20 +143,32 @@ Model &Battery2::externalFunction(const ExternalMessage &aMessage)
 
 Model &Battery2::internalFunction(const InternalMessage &aMessage)
 {
-    // Update charge and reset last update time
-    this->charge = calculateNewCharge(aMessage.time());
-    this->lastChargeUpdate = aMessage.time();
+    if (this->state == BatteryState::Full && this->energy_producing() > EPSILON){
+        // there's no change, it's here only to send surplus energy on output function
+        NEXT_CHANGE(VTime::Inf);
+    } else {
+        // Update charge and reset last update time
+        this->charge = calculateNewCharge(aMessage.time());
+        this->lastChargeUpdate = aMessage.time();
 
-    auto state_nextChange = this->calculate_next_state(this->charge);
+        auto state_nextChange = this->calculate_next_state(this->charge);
 
-    this->state = state_nextChange.first;
-    NEXT_CHANGE(state_nextChange.second);
-
+        this->state = state_nextChange.first;
+        NEXT_CHANGE(state_nextChange.second);
+    }
 	return *this;
 }
 
 Model &Battery2::outputFunction(const CollectMessage &aMessage)
 {
+    if (this->state == BatteryState::Full){
+        double extra_energy = this->energy_producing();
+        sendOutput(aMessage.time(), this->surplus_energy, max(0.0, extra_energy));
+        if (extra_energy > EPSILON){
+            // it came here only to inform surplus energy
+            return *this;
+        }
+    }
     // If state has changed, notify port consumers
     double charge = calculateNewCharge(aMessage.time());
     sendOutput(aMessage.time(), this->battery_state, this->calculate_next_state(charge).first);

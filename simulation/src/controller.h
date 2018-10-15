@@ -10,6 +10,7 @@
 #define BATTERY_STATE_PORT "battery_state"
 #define LOAD_DEMAND_PORT "load_demand"
 #define BATTERY_SURPLUS_ENERGY_PORT "battery_surplus_energy"
+#define SELLING_ENERGY_PORT "selling_energy"
 
     // Output ports
 #define GRID_DEMAND_PORT "grid_demand"
@@ -47,6 +48,7 @@ class Controller : public Atomic
     // Output ports
     Port &gridDemandPort;
     Port &batteryDemandPort;
+    Port &sellingEnergy;
 
     // State variables
     int batteryState;
@@ -56,6 +58,8 @@ class Controller : public Atomic
 
     ControllerState state;
     bool notifyBattery;
+    bool notifyExtraEnergy;
+    double extraEnergy;
 
     // Helper methods
     void updateGridConsumption();
