@@ -10,16 +10,16 @@
             nextChange(x); \
         } \
     }
+    #define NEXT_CHANGE_AND_LOG(x, currentTime) (cerr << "NEXT_TIME;" << currentTime << ";" << x << endl, nextChange(x))
 
-    #define VTIME_FROM_HOURS(hours) (((hours) > 500) ? (cerr << "Tiempo de espera infinito " << __LINE__<< ": " << (hours) << endl, VTimeFromHoursNew((hours))) : VTimeFromHoursNew((hours)))
+    #define VTIME_FROM_HOURS(hours) (((hours) > 500) ? (cerr << "Tiempo de espera infinito " << __LINE__<< ": " << (hours) << endl, VTimeFromHoursNew((hours))) : \
+        ((hours) < 0) ? (cerr << "Tiempo negative con valor " << hours << " en la linea " << __LINE__ << endl),VTimeFromHoursNew((hours)) : VTimeFromHoursNew((hours)))
 
 
 #else
     #define NEXT_CHANGE(x) nextChange(x)
+    #define NEXT_CHANGE_AND_LOG(x, currentTime) nextChange(x)
 #endif
-
-
-
 
 const VTime VTimeFromHoursNew(double hours)
 {
@@ -93,7 +93,7 @@ Model &Battery2::externalFunction(const ExternalMessage &aMessage)
         if (energy_producing > EPSILON)
         {
             // Time to reach an available energy level
-            NEXT_CHANGE(VTIME_FROM_HOURS((AVAILABE_CAPACITY + EPSILON) / energy_producing));
+            NEXT_CHANGE_AND_LOG(VTIME_FROM_HOURS((AVAILABE_CAPACITY + EPSILON - this->charge) / energy_producing), aMessage.time());
         } 
         else
         {
@@ -106,12 +106,12 @@ Model &Battery2::externalFunction(const ExternalMessage &aMessage)
         if (energy_producing > EPSILON)
         {
             // Time to fill battery
-            NEXT_CHANGE(VTIME_FROM_HOURS(CAPACITY / energy_producing));
+            NEXT_CHANGE_AND_LOG(VTIME_FROM_HOURS((CAPACITY - this->charge) / energy_producing), aMessage.time());
         }
         else if (energy_producing < -EPSILON)
         {
             // Time to empty stored energy
-            NEXT_CHANGE(VTIME_FROM_HOURS(this->charge / -energy_producing));
+            NEXT_CHANGE_AND_LOG(VTIME_FROM_HOURS(this->charge / -energy_producing), aMessage.time());
         }
         else
         {
@@ -123,16 +123,16 @@ Model &Battery2::externalFunction(const ExternalMessage &aMessage)
     // In both Empty and Full states, a change will occur if certain conditions are given in external transitions
     else if (this->state == BatteryState::Empty && energy_producing > EPSILON)
     {
-        NEXT_CHANGE(VTime::Zero);
+        NEXT_CHANGE_AND_LOG(VTime::Zero, aMessage.time());
     }
     else if (this->state == BatteryState::Full && energy_producing < -EPSILON)
     {
-        NEXT_CHANGE(VTime::Zero);
+        NEXT_CHANGE_AND_LOG(VTime::Zero, aMessage.time());
     }
     // In the case no branch is reached, it means that the battery is in Full or Empty state, and
     // with no transition condition
     else {
-        passivate();
+        NEXT_CHANGE_AND_LOG(VTime::Inf, aMessage.time());
     }
 
 	return *this;
@@ -240,7 +240,7 @@ pair<const BatteryState, VTime> Battery2::calculate_next_state(double charge) co
             {
                 return make_pair(
                     BatteryState::Available, 
-                    VTIME_FROM_HOURS((double) (CAPACITY-AVAILABE_CAPACITY) / totalPower)
+                    VTIME_FROM_HOURS((double) (CAPACITY - this->charge) / totalPower)
                 );
             }
             else
