@@ -1,4 +1,4 @@
-#include "bateria.h"
+#include "battery.h"
 #include "controller.h"
 
 Controller::Controller(const string &name) :
@@ -14,10 +14,13 @@ Controller::Controller(const string &name) :
     batteryDemandPort(addOutputPort(BATTERY_DEMAND_PORT)),
 
     // State variables
-    batteryState(Bateria::EMPTY),
+    batteryState(BatteryState::Empty),
     currentLoadDemand(0.0),
     batteryDemand(0.0),
-    gridDemand(0.0)
+    gridDemand(0.0),
+
+    notifyBattery(false),
+    state(ControllerState::AllGrid)
 {}
 
 Model& Controller::initFunction() {
@@ -26,52 +29,73 @@ Model& Controller::initFunction() {
 }
 
 Model& Controller::externalFunction( const ExternalMessage &aMessage) {
+    // New battery state
     if (aMessage.port() == this->batteryStatePort) {
-        int newBatteryState = (int) std::round(MessageValueAsDouble(aMessage));
-        cerr << "New battery state arrive: " << newBatteryState << endl;
-        this->batteryState = newBatteryState;
-        updateGridConsumption();
-    } else 
-    if (aMessage.port() == this->loadDemand) {
+        this->batteryState = (int) std::round(MessageValueAsDouble(aMessage));
+
+        // Since a new battery state arrived, update controler state
+        updateControllerState();
+
+    // New load demand
+    } else if (aMessage.port() == this->loadDemand) {
         this->currentLoadDemand = MessageValueAsDouble(aMessage);
-        cerr << "New load demand: " << this->currentLoadDemand << endl;
-        updateGridConsumption();
-    } else
-    if (aMessage.port() == this->batterySurplusEnergy){
-        cout << "########## " << MessageValueAsDouble(aMessage) << endl;
-        this->gridDemand = -MessageValueAsDouble(aMessage);
     }
-    // Schedule an internal transition to propagate demand changes
+
+    updateGridConsumption();
+
     nextChange(VTime::Zero);
     return *this;
 }
 
+void Controller::updateControllerState() {
+    switch(this->state) {
+        case ControllerState::AllGrid:
+            if (this->batteryState == BatteryState::Available) {
+                this->state = ControllerState::GridAndBattery;
+            }
+            break;
+
+        case ControllerState::GridAndBattery:
+            if (this->batteryState == BatteryState::Empty) {
+                this->state = ControllerState::AllGrid;
+                this->notifyBattery = true;
+            }
+            break;
+
+        default:
+            cerr << "Battery state " << this->batteryState << " arrived. No ControllerState change produced" << endl;
+            break;
+    }
+}
+
 void Controller::updateGridConsumption() {
-    if (this->batteryState == Bateria::AVAILABLE || 
-        this->batteryState == Bateria::FULL) {
-        // Battery available to use as supply
-        if (this->currentLoadDemand < Bateria::MAXIMUM_POWER) {
-            // The whole load demand can be supplied by the battery
-            this->batteryDemand = this->currentLoadDemand;
-            this->gridDemand = 0;
-        } else {
-            this->batteryDemand = Bateria::MAXIMUM_POWER;
+    switch(this->state) {
+        case ControllerState::AllGrid:
+            this->batteryDemand = 0;
+            this->gridDemand = this->currentLoadDemand;
+            break;
+
+        case ControllerState::GridAndBattery:
+            this->batteryDemand = std::min((double) MAXIMUM_POWER, this->currentLoadDemand);
             this->gridDemand = this->currentLoadDemand - this->batteryDemand;
-        }
-    } else {
-        this->batteryDemand = 0;
-        this->gridDemand = this->currentLoadDemand;
+            break;
     }
 }
 
 Model& Controller::internalFunction( const InternalMessage &aMessage) {
     nextChange(VTime::Inf);
     return *this;
-    // passivate();
 }
 
 Model& Controller::outputFunction( const CollectMessage &aMessage) {
 	sendOutput(aMessage.time(), this->gridDemandPort, this->gridDemand);
-	sendOutput(aMessage.time(), this->batteryDemandPort, this->batteryDemand);
+
+    if (this->state == ControllerState::GridAndBattery || this->notifyBattery)
+	    sendOutput(aMessage.time(), this->batteryDemandPort, this->batteryDemand);
+
+    if (this->state == ControllerState::AllGrid) {
+        this->notifyBattery = false;
+    }
+
 	return *this ;
 }

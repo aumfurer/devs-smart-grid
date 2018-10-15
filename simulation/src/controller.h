@@ -5,6 +5,7 @@
 
 #include "atomic.h"
 #include "VTime.h"
+#include <cmath>
 
 #define BATTERY_STATE_PORT "battery_state"
 #define LOAD_DEMAND_PORT "load_demand"
@@ -17,6 +18,11 @@
 #define CONTROLLER_NAME "controller"
 
 #define MessageValueAsDouble(aMessage) Real::from_value(aMessage.value()).value()
+
+enum ControllerState {
+  AllGrid,
+  GridAndBattery
+};
 
 class Controller : public Atomic 
 {
@@ -48,8 +54,12 @@ class Controller : public Atomic
     double batteryDemand;
     double gridDemand;
 
+    ControllerState state;
+    bool notifyBattery;
+
     // Helper methods
     void updateGridConsumption();
+    void updateControllerState();
 };
 
 #endif
