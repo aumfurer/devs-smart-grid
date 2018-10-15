@@ -1,7 +1,7 @@
 [top]
 components : bateria@bateria celda_solar@celda_solar windTurbine@generador_eolico controlador@controller
 
-out : grid_out controlBatteryState controlBatteryDemand solarPowerBeingGenerated windPowerBeingGenerated
+out : grid_out controlBatteryState controlBatteryDemand solarPowerBeingGenerated windPowerBeingGenerated grid_sell
 
 in : radiation wind_speed power_consumption
 
@@ -14,6 +14,8 @@ link : out@windTurbine wind_turbine@bateria
 link : battery_demand@controlador required_energy@bateria 
 
 link : battery_state@bateria battery_state@controlador
+link : surplus_energy@bateria battery_surplus_energy@controlador
+link : selling_energy@controlador grid_sell
 
 link : grid_demand@controlador grid_out
 link : out@celda_solar solarPowerBeingGenerated
