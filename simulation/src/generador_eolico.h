@@ -32,6 +32,8 @@ class GeneradorEolico : public Atomic {
 
     double energia_produciendo;
     double energia_produciendo_previo;
+
+    double calculate_energy(double windSpeed) const;
 };
 
 #endif
