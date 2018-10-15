@@ -222,12 +222,12 @@ pair<const BatteryState, VTime> Battery2::calculate_next_state(double charge) co
             // totalPower could be negative
             if (totalPower < -EPSILON)
             {
-                return make_pair(BatteryState::Empty, VTimeFromHoursNew((double) charge / -totalPower));
+                return make_pair(BatteryState::Available, VTimeFromHoursNew((double) charge / -totalPower));
             }
             else if (totalPower > EPSILON)
             {
                 return make_pair(
-                    BatteryState::Charging, 
+                    BatteryState::Available, 
                     VTimeFromHoursNew((double) (CAPACITY-AVAILABE_CAPACITY) / totalPower)
                 );
             }
@@ -254,7 +254,7 @@ pair<const BatteryState, VTime> Battery2::calculate_next_state(double charge) co
 
         case  BatteryState::Full:
             assert(totalPower < -EPSILON);
-            return make_pair(BatteryState::Empty, VTimeFromHoursNew(charge / -totalPower));
+            return make_pair(BatteryState::Available, VTimeFromHoursNew(charge / -totalPower));
             break;
     }
 }
