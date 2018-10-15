@@ -52,7 +52,6 @@ class Battery2 : public Atomic {
 
     // Used to calculate the charge at each transition
     VTime lastChargeUpdate;
-    bool stateHasChanged;
 
     double calculateNewCharge(VTime currentTime) const;
     void update_energy_producing(const ExternalMessage &aMessage);
