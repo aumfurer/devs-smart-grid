@@ -27,8 +27,8 @@ Battery2::Battery2(const string &name) :
 
     // Old ports remained for back compatibility
 	// Input ports
-	windTurbineEnergyIn(addInputPort("wind_turbine")),
 	solarPanelEnergyIn(addInputPort("solar_panel")),
+	windTurbineEnergyIn(addInputPort("wind_turbine")),
 	required_energy(addInputPort("required_energy")),
 
 	// Output ports
@@ -204,60 +204,57 @@ pair<const BatteryState, VTime> Battery2::calculate_next_state(double charge) co
     double generatorsEnergy = this->solarPanelPower + this->windTurbinePower; 
     double totalPower = generatorsEnergy - this->controllerDemand;
 
-    if (this->state == BatteryState::Empty)
+    switch (this->state) 
     {
-        assert(generatorsEnergy > EPSILON);
-        return make_pair(
-            BatteryState::Charging,
-            VTimeFromHoursNew((double)(AVAILABE_CAPACITY + EPSILON) / (generatorsEnergy))
-        );
-    }
-    else if (this->state == BatteryState::Charging)
-    {
-        assert(charge > AVAILABE_CAPACITY);
-        assert(generatorsEnergy > EPSILON);
+        case BatteryState::Empty:    
+            assert(generatorsEnergy > EPSILON);
+            return make_pair(
+                BatteryState::Charging,
+                VTimeFromHoursNew((double)(AVAILABE_CAPACITY + EPSILON) / (generatorsEnergy))
+            );
+            break;
 
-        // TODO: I've already done this check. Refactor this
-        // Consider case in which I already have a demand from the controller, so
-        // totalPower could be negative
-        if (totalPower < -EPSILON)
-        {
-            //EMPTY?
-            return make_pair(BatteryState::Empty, VTimeFromHoursNew((double) charge / -totalPower));
-        }
-        else if (totalPower > EPSILON)
-        {
-            return make_pair(BatteryState::Charging, VTimeFromHoursNew((double) CAPACITY / totalPower));
-        }
-        else
-        {
-            return make_pair(BatteryState::Available, VTime::Inf);
-        }
-    }
-    else if (this->state == BatteryState::Available && charge < EPSILON)
-    {
-        if(charge < EPSILON)
-        {
-            return make_pair(BatteryState::Empty, VTime::Inf);
-        } else 
-        if (charge > MAXIMUM_POWER - EPSILON)
-        {
-            assert(totalPower > EPSILON);
-            return make_pair(BatteryState::Full, VTime::Inf);
-        } else 
-        {
-            assert(false);
-        }
-    }
-    else if (this->state == BatteryState::Full)
-    {
-        assert(totalPower < -EPSILON);
-        return make_pair(BatteryState::Available, VTimeFromHoursNew(charge / -totalPower));
-    }
-    else
-    {
-        std::cerr << "No state transition happend" << std::endl;
-        // Fail fast
-        exit(1);
+        case BatteryState::Charging:
+            assert(charge > AVAILABE_CAPACITY);
+            assert(generatorsEnergy > EPSILON);
+            // TODO: I've already done this check. Refactor this
+            // Consider case in which I already have a demand from the controller, so
+            // totalPower could be negative
+            if (totalPower < -EPSILON)
+            {
+                return make_pair(BatteryState::Empty, VTimeFromHoursNew((double) charge / -totalPower));
+            }
+            else if (totalPower > EPSILON)
+            {
+                return make_pair(
+                    BatteryState::Charging, 
+                    VTimeFromHoursNew((double) (CAPACITY-AVAILABE_CAPACITY) / totalPower)
+                );
+            }
+            else
+            {
+                return make_pair(BatteryState::Available, VTime::Inf);
+            }
+            break;
+
+        case BatteryState::Available:
+            if(charge < EPSILON)
+            {
+                return make_pair(BatteryState::Empty, VTime::Inf);
+            } else 
+            if (charge > MAXIMUM_POWER - EPSILON)
+            {
+                assert(totalPower > EPSILON);
+                return make_pair(BatteryState::Full, VTime::Inf);
+            } else 
+            {
+                assert(false);
+            }
+            break;
+
+        case  BatteryState::Full:
+            assert(totalPower < -EPSILON);
+            return make_pair(BatteryState::Empty, VTimeFromHoursNew(charge / -totalPower));
+            break;
     }
 }
