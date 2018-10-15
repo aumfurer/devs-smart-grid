@@ -10,9 +10,16 @@
             nextChange(x); \
         } \
     }
+
+    #define VTIME_FROM_HOURS(hours) (((hours) > 500) ? (cerr << "Tiempo de espera infinito " << __LINE__<< ": " << (hours) << endl, VTimeFromHoursNew((hours))) : VTimeFromHoursNew((hours)))
+
+
 #else
     #define NEXT_CHANGE(x) nextChange(x)
 #endif
+
+
+
 
 const VTime VTimeFromHoursNew(double hours)
 {
@@ -81,7 +88,7 @@ Model &Battery2::externalFunction(const ExternalMessage &aMessage)
         if (energy_producing > EPSILON)
         {
             // Time to reach an available energy level
-            NEXT_CHANGE(VTimeFromHoursNew((AVAILABE_CAPACITY + EPSILON) / energy_producing));
+            NEXT_CHANGE(VTIME_FROM_HOURS((AVAILABE_CAPACITY + EPSILON) / energy_producing));
         } 
         else
         {
@@ -94,12 +101,12 @@ Model &Battery2::externalFunction(const ExternalMessage &aMessage)
         if (energy_producing > EPSILON)
         {
             // Time to fill battery
-            NEXT_CHANGE(VTimeFromHoursNew(CAPACITY / energy_producing));
+            NEXT_CHANGE(VTIME_FROM_HOURS(CAPACITY / energy_producing));
         }
         else if (energy_producing < -EPSILON)
         {
             // Time to empty stored energy
-            NEXT_CHANGE(VTimeFromHoursNew(this->charge / -energy_producing));
+            NEXT_CHANGE(VTIME_FROM_HOURS(this->charge / -energy_producing));
         }
         else
         {
@@ -210,7 +217,7 @@ pair<const BatteryState, VTime> Battery2::calculate_next_state(double charge) co
             assert(generatorsEnergy > EPSILON);
             return make_pair(
                 BatteryState::Charging,
-                VTimeFromHoursNew((double)(AVAILABE_CAPACITY + EPSILON) / (generatorsEnergy))
+                VTIME_FROM_HOURS((double)(AVAILABE_CAPACITY + EPSILON) / (generatorsEnergy))
             );
             break;
 
@@ -222,13 +229,13 @@ pair<const BatteryState, VTime> Battery2::calculate_next_state(double charge) co
             // totalPower could be negative
             if (totalPower < -EPSILON)
             {
-                return make_pair(BatteryState::Available, VTimeFromHoursNew((double) charge / -totalPower));
+                return make_pair(BatteryState::Available, VTIME_FROM_HOURS((double) charge / -totalPower));
             }
             else if (totalPower > EPSILON)
             {
                 return make_pair(
                     BatteryState::Available, 
-                    VTimeFromHoursNew((double) (CAPACITY-AVAILABE_CAPACITY) / totalPower)
+                    VTIME_FROM_HOURS((double) (CAPACITY-AVAILABE_CAPACITY) / totalPower)
                 );
             }
             else
@@ -254,7 +261,7 @@ pair<const BatteryState, VTime> Battery2::calculate_next_state(double charge) co
 
         case  BatteryState::Full:
             assert(totalPower < -EPSILON);
-            return make_pair(BatteryState::Available, VTimeFromHoursNew(charge / -totalPower));
+            return make_pair(BatteryState::Available, VTIME_FROM_HOURS(charge / -totalPower));
             break;
     }
 }
