@@ -51,7 +51,7 @@ Model &CeldaSolar::externalFunction(const ExternalMessage &msg)
 	// producedEnergy = radiacion / 1000 * PeakPower
 
 	// TODO: Refactor this to be taken as parameter
-	double PeakPower = 40.0;
+	double PeakPower = 100.0;
 	this->energia_produciendo = radiacion / 1000 * PeakPower;
 
 	// Hack para hacer una transición interna luego de recibir una novedad
