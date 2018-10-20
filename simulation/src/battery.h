@@ -5,6 +5,7 @@
 #include "VTime.h"
 #include <cmath>
 #include <iostream>
+#include <utility>
 
 #define CAPACITY 500
 #define MAXIMUM_POWER 500
@@ -51,9 +52,11 @@ class Battery : public Atomic {
 
     // Used to calculate the charge at each transition
     VTime lastChargeUpdate;
-    bool stateHasChanged;
 
-    void calculateNewCharge(VTime currentTime);
+    double calculateNewCharge(VTime currentTime) const;
+    void update_energy_producing(const ExternalMessage &aMessage);
+    double energy_producing() const;
+    pair<const BatteryState, VTime> calculate_next_state(double charge) const;
 };
 
 #endif
