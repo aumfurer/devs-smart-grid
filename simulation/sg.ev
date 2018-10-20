@@ -1,8 +1,0 @@
-01:00:01:00 radiation 100
-02:20:02:00 wind_speed 1500
-02:30:02:30 power_consumption 3000
-03:00:03:00 radiation 2000
-04:01:01:00 radiation 500
-04:30:01:00 power_consumption 50000
-05:01:02:00 wind_speed 1500
-06:01:03:00 radiation 4500
