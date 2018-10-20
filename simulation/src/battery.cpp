@@ -1,10 +1,32 @@
 #include "battery.h"
 #define DEBUG
 
-VTime VTimeFromHours(double hours)
+#ifdef DEBUG
+    #define NEXT_CHANGE(x) { \
+        if((x).asMsecs()<0){ \
+            cerr << "generando negativo en linea " << __LINE__<< ": " << (x) << endl; \
+            exit(1); \
+        } else { \
+            nextChange(x); \
+        } \
+    }
+    #define NEXT_CHANGE_AND_LOG(x, currentTime) (cerr << "NEXT_TIME;" << currentTime << ";" << x << endl, nextChange(x))
+
+    #define VTIME_FROM_HOURS(hours) (((hours) > 500) ? (cerr << "Tiempo de espera infinito " << __LINE__<< ": " << (hours) << endl, VTimeFromHoursNew((hours))) : \
+        ((hours) < 0) ? (cerr << "Tiempo negative con valor " << hours << " en la linea " << __LINE__ << endl),VTimeFromHoursNew((hours)) : VTimeFromHoursNew((hours)))
+
+
+#else
+    #define NEXT_CHANGE(x) nextChange(x)
+    #define NEXT_CHANGE_AND_LOG(x, currentTime) nextChange(x)
+#endif
+
+const VTime VTimeFromHoursNew(double hours)
 {
-    // Convert through using hours in ms
-	return VTime( 0, 0, 0, hours * 3600 * 1000, 0);
+    // Convert through using hours in seconds
+    return hours > 500 ?
+        VTime::Inf:
+        VTime((float)(hours * 3600));
 }
 
 Battery::Battery(const string &name) :
@@ -12,8 +34,8 @@ Battery::Battery(const string &name) :
 
     // Old ports remained for back compatibility
 	// Input ports
-	windTurbineEnergyIn(addInputPort("wind_turbine")),
 	solarPanelEnergyIn(addInputPort("solar_panel")),
+	windTurbineEnergyIn(addInputPort("wind_turbine")),
 	required_energy(addInputPort("required_energy")),
 
 	// Output ports
@@ -27,8 +49,7 @@ Battery::Battery(const string &name) :
     charge(0),
     state(BatteryState::Empty),
 
-    lastChargeUpdate(VTime::Zero),
-    stateHasChanged(false)
+    lastChargeUpdate(VTime::Zero)
 {
 }
 
@@ -49,36 +70,29 @@ Model &Battery::externalFunction(const ExternalMessage &aMessage)
     #endif
 
     // Update charge and reset last update time
-    calculateNewCharge(aMessage.time());
+    this->charge = calculateNewCharge(aMessage.time());
+
+    #ifdef DEBUG
+        cerr << "NewCharge;" << aMessage.time() << ";" << this->charge << endl;
+    #endif
+
     this->lastChargeUpdate = aMessage.time();
 
-	double messageValue = Real::from_value(aMessage.value()).value();
-
-    // Update new state variables
-	if(aMessage.port() == this->solarPanelEnergyIn)
-    {
-		this->solarPanelPower = messageValue;
-	} else 
-    if(aMessage.port() == this->windTurbineEnergyIn)
-    {
-		this->windTurbinePower = messageValue;
-	} else
-    if(aMessage.port() == this->required_energy)
-    {
-        this->controllerDemand = messageValue;
-	}
+    this->update_energy_producing(aMessage);
 
     // Since this is not an external transition, or it should 
     // have happend before the one that was scheduled. That means
     // that no state change will happeds here, but the time till the 
     // next one might have changed due to the generated powet update.
 
+    double energy_producing = this->energy_producing();
+
     if (this->state == BatteryState::Charging)
     {
-        if (this->solarPanelPower + this->windTurbinePower > EPSILON)
+        if (energy_producing > EPSILON)
         {
             // Time to reach an available energy level
-            nextChange(VTimeFromHours((AVAILABE_CAPACITY + EPSILON) / (this->solarPanelPower + this->windTurbinePower)));
+            NEXT_CHANGE_AND_LOG(VTIME_FROM_HOURS((AVAILABE_CAPACITY + EPSILON - this->charge) / energy_producing), aMessage.time());
         } 
         else
         {
@@ -88,16 +102,15 @@ Model &Battery::externalFunction(const ExternalMessage &aMessage)
     }
     else if (this->state == BatteryState::Available)
     {
-        double totalPower = this->solarPanelPower + this->windTurbinePower - this->controllerDemand;
-        if (totalPower > EPSILON)
+        if (energy_producing > EPSILON)
         {
             // Time to fill battery
-            nextChange(VTimeFromHours(CAPACITY / totalPower));
+            NEXT_CHANGE_AND_LOG(VTIME_FROM_HOURS((CAPACITY - this->charge) / energy_producing), aMessage.time());
         }
-        else if (totalPower < -EPSILON)
+        else if (energy_producing < -EPSILON)
         {
             // Time to empty stored energy
-            nextChange(VTimeFromHours(this->charge / -totalPower));
+            NEXT_CHANGE_AND_LOG(VTIME_FROM_HOURS(this->charge / -energy_producing), aMessage.time());
         }
         else
         {
@@ -107,18 +120,22 @@ Model &Battery::externalFunction(const ExternalMessage &aMessage)
         }
     }
     // In both Empty and Full states, a change will occur if certain conditions are given in external transitions
-    else if (this->state == BatteryState::Empty && (this->solarPanelPower + this->windTurbinePower) > EPSILON)
+    else if (this->state == BatteryState::Empty && energy_producing > EPSILON)
     {
-        nextChange(VTime::Zero);
+        NEXT_CHANGE_AND_LOG(VTime::Zero, aMessage.time());
     }
-    else if (this->state == BatteryState::Full && (this->solarPanelPower + this->windTurbinePower - this->controllerDemand) < -EPSILON)
+    else if (this->state == BatteryState::Full && energy_producing < -EPSILON)
     {
-        nextChange(VTime::Zero);
+        NEXT_CHANGE_AND_LOG(VTime::Zero, aMessage.time());
+    }
+    else if (this->state == BatteryState::Full && energy_producing > EPSILON)
+    {
+        NEXT_CHANGE_AND_LOG(VTime::Zero, aMessage.time());
     }
     // In the case no branch is reached, it means that the battery is in Full or Empty state, and
     // with no transition condition
     else {
-        passivate();
+        NEXT_CHANGE_AND_LOG(VTime::Inf, aMessage.time());
     }
 
 	return *this;
@@ -126,89 +143,40 @@ Model &Battery::externalFunction(const ExternalMessage &aMessage)
 
 Model &Battery::internalFunction(const InternalMessage &aMessage)
 {
-    // Update charge and reset last update time
-    calculateNewCharge(aMessage.time());
-    this->lastChargeUpdate = aMessage.time();
+    if (this->state == BatteryState::Full && this->energy_producing() > EPSILON){
+        // there's no change, it's here only to send surplus energy on output function
+        NEXT_CHANGE(VTime::Inf);
+    } else {
+        // Update charge and reset last update time
+        this->charge = calculateNewCharge(aMessage.time());
+        this->lastChargeUpdate = aMessage.time();
 
-    double totalPower = this->solarPanelPower + this->windTurbinePower - this->controllerDemand;
+        auto state_nextChange = this->calculate_next_state(this->charge);
 
-    // If an internal transition is reached, state should change
-    if (this->state == BatteryState::Empty && (this->solarPanelPower + this->windTurbinePower) > EPSILON)
-    {
-        this->stateHasChanged = true;
-        this->state = BatteryState::Charging;
-        nextChange(VTimeFromHours((double)(AVAILABE_CAPACITY + EPSILON) / (this->solarPanelPower + this->windTurbinePower)));
+        this->state = state_nextChange.first;
+        NEXT_CHANGE(state_nextChange.second);
     }
-    else if (this->state == BatteryState::Charging 
-        && this->charge > AVAILABE_CAPACITY 
-        && (this->solarPanelPower + this->windTurbinePower) > EPSILON)
-    {
-        this->stateHasChanged = true;
-        this->state = BatteryState::Available;
-        // TODO: I've already done this check. Refactor this
-        // Consider case in which I already have a demand from the controller, so
-        // totalPower could be negative
-        if (totalPower < -EPSILON)
-        {
-            nextChange(VTimeFromHours((double) this->charge / -totalPower));
-        }
-        else if (totalPower > EPSILON)
-        {
-            nextChange(VTimeFromHours((double) CAPACITY / totalPower));
-        }
-        else
-        {
-            nextChange(VTime::Inf);
-        }
-    }
-    else if (this->state == BatteryState::Available
-        && this->charge < EPSILON)
-    {
-        this->stateHasChanged = true;
-        this->state = BatteryState::Empty;
-        nextChange(VTime::Inf);
-    }
-    else if (this->state == BatteryState::Available
-        && this->charge > (MAXIMUM_POWER - EPSILON)
-        && (this->solarPanelPower + this->windTurbinePower - this->controllerDemand) > EPSILON)
-    {
-        this->stateHasChanged = true;
-        this->state = BatteryState::Full;
-        nextChange(VTime::Inf);
-    }
-    else if (this->state == BatteryState::Full
-        && (this->solarPanelPower + this->windTurbinePower - this->controllerDemand) < -EPSILON)
-    {
-        this->stateHasChanged = true;
-        this->state = BatteryState::Available;
-        nextChange(VTimeFromHours(this->charge / -totalPower));
-    }
-    else
-    {
-        std::cerr << "No state transition happend" << std::endl;
-        // Fail fast
-        exit(1);
-    }
-
 	return *this;
 }
 
 Model &Battery::outputFunction(const CollectMessage &aMessage)
 {
-    // If state has changed, notify port consumers
-    if (this->stateHasChanged)
-    {
-	    sendOutput(aMessage.time(), this->battery_state, this->state);
+    if (this->state == BatteryState::Full){
+        double extra_energy = this->energy_producing();
+        sendOutput(aMessage.time(), this->surplus_energy, max(0.0, extra_energy));
+        if (extra_energy > EPSILON){
+            // it came here only to inform surplus energy
+            return *this;
+        }
     }
-
-    // Clear state change flag
-    this->stateHasChanged = false;
-
+    // If state has changed, notify port consumers
+    double charge = calculateNewCharge(aMessage.time());
+    sendOutput(aMessage.time(), this->battery_state, this->calculate_next_state(charge).first);
 	return *this ;
 }
 
 
-void Battery::calculateNewCharge(VTime currentTime)
+double Battery::calculateNewCharge(VTime currentTime) const
 {
     // Convert elapsed time to hours
     double elapsedTimeBetweenUpdates = (currentTime - this->lastChargeUpdate).asMsecs() / (double) (3600 * 1000);
@@ -226,7 +194,91 @@ void Battery::calculateNewCharge(VTime currentTime)
         chargingRate = this->solarPanelPower + this->windTurbinePower - this->controllerDemand;
     }
 
-    this->charge += chargingRate * elapsedTimeBetweenUpdates;
+    double charge = this->charge + chargingRate * elapsedTimeBetweenUpdates;
     // Keep charge between 0 and CAPACITY
-    this->charge = std::max(0.0, std::min((double) CAPACITY, this->charge));
+    return std::max(0.0, std::min((double) CAPACITY, charge));
+}
+
+void Battery::update_energy_producing(const ExternalMessage &aMessage)
+{
+    double messageValue = Real::from_value(aMessage.value()).value();
+    if(aMessage.port() == this->solarPanelEnergyIn)
+    {
+		this->solarPanelPower = messageValue;
+	} else 
+    if(aMessage.port() == this->windTurbineEnergyIn)
+    {
+		this->windTurbinePower = messageValue;
+	} else
+    if(aMessage.port() == this->required_energy)
+    {
+        this->controllerDemand = messageValue;
+	}
+}
+
+double Battery::energy_producing() const
+{
+    if (this->state == BatteryState::Charging || this->state == BatteryState::Empty){
+        return this->solarPanelPower + this->windTurbinePower;
+    } else {
+        return this->solarPanelPower + this->windTurbinePower - this->controllerDemand;
+    }
+}
+
+pair<const BatteryState, VTime> Battery::calculate_next_state(double charge) const 
+{
+
+    double generatorsEnergy = this->solarPanelPower + this->windTurbinePower; 
+    double totalPower = generatorsEnergy - this->controllerDemand;
+
+    switch (this->state) 
+    {
+        case BatteryState::Empty:    
+            assert(generatorsEnergy > EPSILON);
+            return make_pair(
+                BatteryState::Charging,
+                VTIME_FROM_HOURS((double)(AVAILABE_CAPACITY + EPSILON) / (generatorsEnergy))
+            );
+            break;
+
+        case BatteryState::Charging:
+            assert(charge > AVAILABE_CAPACITY);
+            assert(generatorsEnergy > EPSILON);
+            if (totalPower < -EPSILON)
+            {
+                return make_pair(BatteryState::Available, VTIME_FROM_HOURS((double) charge / -totalPower));
+            }
+            else if (totalPower > EPSILON)
+            {
+                return make_pair(
+                    BatteryState::Available, 
+                    VTIME_FROM_HOURS((double) (CAPACITY - this->charge) / totalPower)
+                );
+            }
+            else
+            {
+                return make_pair(BatteryState::Available, VTime::Inf);
+            }
+            break;
+
+        case BatteryState::Available:
+            if(charge < EPSILON)
+            {
+                return make_pair(BatteryState::Empty, VTime::Inf);
+            } else 
+            if (charge > MAXIMUM_POWER - EPSILON)
+            {
+                assert(totalPower > EPSILON);
+                return make_pair(BatteryState::Full, VTime::Inf);
+            } else 
+            {
+                assert(false);
+            }
+            break;
+
+        case  BatteryState::Full:
+            assert(totalPower < -EPSILON);
+            return make_pair(BatteryState::Available, VTIME_FROM_HOURS(charge / -totalPower));
+            break;
+    }
 }
