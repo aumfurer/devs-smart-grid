@@ -21,6 +21,8 @@ EVENTS_FILE=$2
 echo "Removing prevously used log files"
 # TODO
 echo "Running simulation"
+echo -n "Command being run: "
+echo "$SIMULATOR -e$EVENTS_FILE -m$MODEL_FILE -o$OUTPUT_FOLDER/$SIMULATION_NAME -l$OUTPUT_FOLDER/$SIMULATION_NAME.log -t$ENDING_TIME"
 
 $SIMULATOR -e$EVENTS_FILE -m$MODEL_FILE -o$OUTPUT_FOLDER/$SIMULATION_NAME -l$OUTPUT_FOLDER/$SIMULATION_NAME.log -t$ENDING_TIME &> /tmp/cliOutput
 echo "Filtering battery charge changes"
