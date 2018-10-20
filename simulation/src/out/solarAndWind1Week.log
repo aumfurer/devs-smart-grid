@@ -1,0 +1,7 @@
+[logfiles]
+controlador : out/solarAndWind1Week.log04 
+windturbine : out/solarAndWind1Week.log03 
+celda_solar : out/solarAndWind1Week.log02 
+bateria : out/solarAndWind1Week.log01 
+top : out/solarAndWind1Week.log05 
+ParallelRoot : out/solarAndWind1Week.log00 
