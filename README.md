@@ -1,18 +1,11 @@
-# devs-smart-grid
+## devs-smart-grids
 
-Repositorio para la implementación de una simulación de un sistema de smart grids usando DEVS
+Repositorio para la implementación de una simulación de un sistema de smart grids usando DEVS.
 
-## TODO
+Los notebooks usados para el análisis de las simulaciones tienen las siguientes dependencias:
+- Python 3.7+
+- pip
+- Jupyter (IPython creo que también funciona)
+- Instalar dependencias con ```pip install -r requirements.txt``` 
 
-- Analisis modelo controlador + solar
-- Analisis modelo controlador + solar y eolico
-- Conclusion sobre que sirve el solar y eolico
-- Analisis venta red vs. pedido a red
-- Simular un mes entero y ver que onda
-- Cambiar los fuentes de la Bateria para que quede solor Battery2
-- Analizar los datos  de la carga, para describirlos cuantitativamente, y si hace falta, correr un smooth encim
-- limpiar ma's u ev's
-- comentar un poco los notebook
-
-## DONE
 
